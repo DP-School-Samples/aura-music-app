@@ -1,117 +1,119 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Play, Pause, SkipForward, SkipBack, Search, Download, CheckCircle, X, Heart } from 'lucide-react';
-
-const glassStyle = "bg-white/5 backdrop-blur-2xl border border-white/10 shadow-2xl";
+import { Play, Pause, SkipForward, SkipBack, Search, Download, CheckCircle, X, User, HardDrive } from 'lucide-react';
 
 const AuraApp = () => {
+  // --- STATE ---
+  const [user, setUser] = useState(JSON.parse(localStorage.getItem('aura_user')) || null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [songs, setSongs] = useState([
-    { id: '1', title: "Starlight", artist: "Muse", cover: "https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=800", color: "#3b82f6" },
-    { id: '2', title: "Blinding Lights", artist: "The Weeknd", cover: "https://images.unsplash.com/photo-1493225255756-d9584f8606e9?w=800", color: "#ef4444" }
-  ]);
+  const [songs, setSongs] = useState([]);
   const [activeSong, setActiveSong] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [isDownloaded, setIsDownloaded] = useState({});
+  const [offlineVault, setOfflineVault] = useState(JSON.parse(localStorage.getItem('aura_vault')) || []);
+  const [view, setView] = useState('home'); // 'home' or 'vault'
+  
+  const audioRef = useRef(new Audio());
 
+  // --- AUDIO LOGIC ---
+  useEffect(() => {
+    if (activeSong) {
+      audioRef.current.src = activeSong.url; // This would be the real MP3 link
+      if (isPlaying) audioRef.current.play().catch(e => console.log("Audio block: Need user interaction"));
+    }
+  }, [activeSong]);
+
+  useEffect(() => {
+    isPlaying ? audioRef.current.play() : audioRef.current.pause();
+  }, [isPlaying]);
+
+  // --- ACCOUNT LOGIC ---
+  const handleLogin = () => {
+    const fakeUser = { name: "Listener", id: "123", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Aura" };
+    setUser(fakeUser);
+    localStorage.setItem('aura_user', JSON.stringify(fakeUser));
+  };
+
+  // --- DOWNLOAD/OFFLINE LOGIC ---
+  const saveToVault = (song) => {
+    const updatedVault = [...offlineVault, song];
+    setOfflineVault(updatedVault);
+    localStorage.setItem('aura_vault', JSON.stringify(updatedVault));
+    alert(`${song.title} saved to your local vault!`);
+  };
+
+  // --- SEARCH LOGIC (Path A: Search any song) ---
   const handleSearch = async (e) => {
     e.preventDefault();
-    if (!searchQuery) return;
-    // Real Spotify/YouTube API integration would go here
+    // Simulate fetching from a global database
     const results = [
-      { id: Date.now(), title: searchQuery, artist: "Global Artist", cover: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=800", color: "#8b5cf6" },
-      { id: Date.now()+1, title: searchQuery + " (Aura Mix)", artist: "Verified Creator", cover: "https://images.unsplash.com/photo-1459749411177-042180ce673c?w=800", color: "#06b6d4" }
+      { id: '1', title: "After Hours", artist: "The Weeknd", cover: "https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=800", color: "#8b0000", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" },
+      { id: '2', title: "Levitating", artist: "Dua Lipa", cover: "https://images.unsplash.com/photo-1493225255756-d9584f8606e9?w=800", color: "#1e3a8a", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3" }
     ];
     setSongs(results);
   };
 
   return (
-    <div className="min-h-screen text-white relative">
-      {/* Liquid Background */}
-      <div 
-        className="fixed inset-0 transition-all duration-1000 opacity-30 blur-[120px]"
-        style={{ backgroundColor: activeSong?.color || '#1e1e1e' }}
-      />
+    <div className="min-h-screen text-white relative bg-[#050505] overflow-x-hidden">
+      <div className="fixed inset-0 opacity-20 blur-[120px] transition-all duration-1000" style={{ backgroundColor: activeSong?.color || '#121212' }} />
 
-      {/* Search Header */}
-      <header className="relative z-10 pt-12 px-6 flex flex-col items-center">
-        <motion.h1 
-          initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}
-          className="text-5xl font-black mb-8 tracking-tighter"
-        >
-          AURA
-        </motion.h1>
-        <form onSubmit={handleSearch} className="w-full max-w-2xl relative">
-          <input 
-            type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search any song in the world..." 
-            className={`w-full p-6 pl-16 rounded-full outline-none transition-all ${glassStyle} focus:ring-2 ring-white/20 text-lg`}
-          />
-          <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-white/40" />
-        </form>
-      </header>
+      {/* Sidebar Navigation */}
+      <nav className="fixed left-0 top-0 bottom-0 w-20 bg-white/5 backdrop-blur-md border-r border-white/10 flex flex-col items-center py-8 gap-10 z-20">
+        <div className="font-black text-xl italic tracking-tighter">A</div>
+        <button onClick={() => setView('home')} className={view === 'home' ? "text-white" : "text-white/40"}><Search /></button>
+        <button onClick={() => setView('vault')} className={view === 'vault' ? "text-white" : "text-white/40"}><HardDrive /></button>
+        <div className="mt-auto">
+          {user ? <img src={user.avatar} className="w-10 h-10 rounded-full" /> : <button onClick={handleLogin}><User /></button>}
+        </div>
+      </nav>
 
-      {/* Song List */}
-      <main className="relative z-10 p-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-7xl mx-auto">
-        {songs.map(song => (
-          <motion.div 
-            key={song.id} layoutId={`card-${song.id}`}
-            onClick={() => { setActiveSong(song); setIsPlaying(true); }}
-            className={`p-4 rounded-[2rem] cursor-pointer flex items-center gap-5 ${glassStyle} hover:bg-white/10 transition-colors`}
-          >
-            <motion.img layoutId={`art-${song.id}`} src={song.cover} className="w-20 h-20 rounded-2xl object-cover shadow-lg" />
-            <div className="flex-1">
-              <h3 className="font-bold text-xl">{song.title}</h3>
-              <p className="text-white/40">{song.artist}</p>
+      <main className="ml-20 p-8">
+        {view === 'home' ? (
+          <section className="max-w-5xl mx-auto">
+            <h1 className="text-5xl font-black mb-12 tracking-tight">Explore</h1>
+            <form onSubmit={handleSearch} className="mb-12">
+              <input 
+                type="text" placeholder="Search world database..." 
+                className="w-full bg-white/5 border border-white/10 p-6 rounded-2xl outline-none focus:ring-2 ring-white/20"
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </form>
+            <div className="grid gap-4">
+              {songs.map(song => (
+                <SongCard key={song.id} song={song} onPlay={() => setActiveSong(song)} onSave={() => saveToVault(song)} />
+              ))}
             </div>
-            <button 
-              onClick={(e) => { e.stopPropagation(); setIsDownloaded({...isDownloaded, [song.id]: true}); }}
-              className="p-3 rounded-full hover:bg-white/10"
-            >
-              {isDownloaded[song.id] ? <CheckCircle className="text-green-400" /> : <Download size={20} />}
-            </button>
-          </motion.div>
-        ))}
+          </section>
+        ) : (
+          <section className="max-w-5xl mx-auto">
+            <h1 className="text-5xl font-black mb-12 tracking-tight">Your Vault</h1>
+            <div className="grid gap-4">
+              {offlineVault.length > 0 ? offlineVault.map(song => (
+                <SongCard key={song.id} song={song} onPlay={() => setActiveSong(song)} isSaved={true} />
+              )) : <p className="text-white/40 italic">Your offline vault is empty.</p>}
+            </div>
+          </section>
+        )}
       </main>
 
-      {/* Fullscreen Player */}
+      {/* Floating Mini Player */}
       <AnimatePresence>
         {activeSong && (
           <motion.div 
-            initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-            transition={{ type: "spring", damping: 30, stiffness: 200 }}
-            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-3xl p-8 flex flex-col items-center justify-center"
+            initial={{ y: 100 }} animate={{ y: 0 }}
+            className="fixed bottom-6 left-24 right-6 h-24 bg-white/10 backdrop-blur-2xl border border-white/20 rounded-3xl flex items-center px-6 gap-6 z-30"
           >
-            <button onClick={() => setActiveSong(null)} className="absolute top-10 right-10 p-4 bg-white/5 rounded-full"><X /></button>
-            
-            <motion.img 
-              layoutId={`art-${activeSong.id}`} src={activeSong.cover} 
-              className="w-80 h-80 md:w-[450px] md:h-[450px] rounded-[60px] shadow-2xl mb-12 border border-white/10" 
-            />
-
-            <div className="text-center w-full max-w-lg">
-              <h2 className="text-5xl font-bold mb-3 tracking-tight">{activeSong.title}</h2>
-              <p className="text-2xl text-white/40 mb-12">{activeSong.artist}</p>
-              
-              <div className="flex items-center justify-between px-10 mb-12">
-                <SkipBack size={40} className="hover:text-white/60 cursor-pointer" />
-                <motion.button 
-                  whileTap={{ scale: 0.9 }} onClick={() => setIsPlaying(!isPlaying)}
-                  className="w-24 h-24 bg-white rounded-full flex items-center justify-center text-black"
-                >
-                  {isPlaying ? <Pause size={48} fill="black" /> : <Play size={48} fill="black" className="ml-2" />}
-                </motion.button>
-                <SkipForward size={40} className="hover:text-white/60 cursor-pointer" />
-              </div>
-
-              <div className="flex items-center gap-4 text-xs text-white/30 font-mono">
-                <span>0:45</span>
-                <div className="h-1.5 flex-1 bg-white/10 rounded-full overflow-hidden">
-                  <motion.div initial={{ width: 0 }} animate={{ width: '45%' }} className="h-full bg-white" />
-                </div>
-                <span>3:30</span>
-              </div>
+            <img src={activeSong.cover} className="w-14 h-14 rounded-xl shadow-lg" />
+            <div className="flex-1">
+              <h4 className="font-bold leading-none mb-1">{activeSong.title}</h4>
+              <p className="text-xs text-white/40 uppercase tracking-widest">{activeSong.artist}</p>
+            </div>
+            <div className="flex items-center gap-6">
+              <SkipBack className="cursor-pointer" />
+              <button onClick={() => setIsPlaying(!isPlaying)} className="w-12 h-12 bg-white rounded-full flex items-center justify-center text-black">
+                {isPlaying ? <Pause size={20} fill="black" /> : <Play size={20} fill="black" className="ml-1" />}
+              </button>
+              <SkipForward className="cursor-pointer" />
             </div>
           </motion.div>
         )}
@@ -119,5 +121,24 @@ const AuraApp = () => {
     </div>
   );
 };
+
+const SongCard = ({ song, onPlay, onSave, isSaved }) => (
+  <motion.div 
+    whileHover={{ x: 10 }}
+    className="flex items-center gap-5 p-4 bg-white/5 rounded-2xl border border-transparent hover:border-white/10 cursor-pointer group"
+    onClick={onPlay}
+  >
+    <img src={song.cover} className="w-16 h-16 rounded-xl object-cover shadow-md" />
+    <div className="flex-1">
+      <h3 className="font-bold text-lg">{song.title}</h3>
+      <p className="text-white/40 text-sm font-medium uppercase tracking-wider">{song.artist}</p>
+    </div>
+    {!isSaved && (
+      <button onClick={(e) => { e.stopPropagation(); onSave(); }} className="p-3 opacity-0 group-hover:opacity-100 transition-opacity">
+        <Download size={20} />
+      </button>
+    )}
+  </motion.div>
+);
 
 createRoot(document.getElementById('root')).render(<AuraApp />);
