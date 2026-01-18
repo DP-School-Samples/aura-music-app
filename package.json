@@ -13,6 +13,9 @@
     "react-dom": "^18.2.0",
     "framer-motion": "^11.0.0",
     "lucide-react": "^0.300.0"
+    "spotify-web-api-js": "^1.5.2",    
+    "axios": "^1.6.0"
+}
   },
   "devDependencies": {
     "@types/react": "^18.2.0",
